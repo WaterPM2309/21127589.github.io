@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video và Canvas</title>
+</head>
+<body>
+    <!-- Thêm nút để chọn video từ máy tính -->
+    <input type="file" id="videoInput" accept="video/mp4,video/webm" />
+    <br />
+    <video id="videoPlayer" width="640" height="360" controls autoplay style="display: none;">
+        <!-- <source src="chidep.mp4" type="video/mp4"> -->
+    </video>
+    <canvas id="canvas" width="640" height="360" style="border:1px solid #000;"></canvas>
+    <script>
+        // Lấy các phần tử DOM
+        var videoInput = document.getElementById('videoInput');
+        var videoPlayer = document.getElementById('videoPlayer');
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d');
+
+        // Khi người dùng chọn video mới
+        videoInput.addEventListener('change', function(event) {
+            var file = event.target.files[0];
+            var objectURL = URL.createObjectURL(file);
+            videoPlayer.src = objectURL;
+            videoPlayer.style.display = 'block'; // Hiển thị video
+            videoPlayer.play(); // Bắt đầu phát video
+        });
+
+        // Khi video được tải
+        videoPlayer.addEventListener('loadedmetadata', function() {
+            // Thêm sự kiện để vẽ canvas mỗi khi một frame mới của video được hiển thị
+            videoPlayer.addEventListener('timeupdate', function() {
+                // Vẽ frame hiện tại của video lên canvas
+                ctx.drawImage(videoPlayer, 0, 0, canvas.width, canvas.height);
+
+                // Lấy dữ liệu hình ảnh từ canvas
+                var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+                // Thực hiện phát hiện biên cạnh
+                detectEdges(imageData);
+            });
+        });
+
+        // Hàm phát hiện biên cạnh
+        function detectEdges(imageData) {
+            var data = imageData.data;
+            var width = imageData.width;
+            var height = imageData.height;
+
+            // Chuyển đổi ảnh sang ảnh xám
+            for (var i = 0; i < data.length; i += 4) {
+                var avg = (data[i] + data[i + 1] + data[i + 2]) / 3;
+                data[i] = avg; // Red
+                data[i + 1] = avg; // Green
+                data[i + 2] = avg; // Blue
+            }
+
+            // Phát hiện biên cạnh của ảnh xám
+            for (var y = 0; y < height; y++) {
+                for (var x = 0; x < width; x++) {
+                    var currentPixel = (y * width + x) * 4;
+                    var nextPixel = currentPixel + (width * 4);
+
+                    if (nextPixel < data.length) {
+                        var gradient = Math.abs(data[currentPixel] - data[nextPixel]);
+                        // Tăng độ chênh lệch màu sắc
+                        gradient *= 2; // Thay đổi giá trị này để tăng hoặc giảm độ chênh lệch
+                        data[currentPixel] = gradient;
+                        data[currentPixel + 1] = gradient;
+                        data[currentPixel + 2] = gradient;
+                    }
+                }
+            }
+
+            // Hiển thị ảnh biên cạnh lên canvas
+            ctx.putImageData(imageData, 0, 0);
+        }
+    </script>
+</body>
+</html>
